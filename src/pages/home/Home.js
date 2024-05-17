@@ -1,9 +1,10 @@
 import { Button, Input, Select, Spin, Typography, Tabs } from "antd";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import { AudioOutlined } from "@ant-design/icons";
 import { capitalizeString } from "../../handler/utils";
+import character from "../../assets/characters/char_one.mp4";
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -13,7 +14,9 @@ export default function Home() {
   const [value, setValue] = useState("");
   const [topic, setTopic] = useState("");
   const [question, setQuestion] = useState("");
-
+  const [audioSrc, setAudioSrc] = useState("");
+  const audioRef = useRef(null);
+  const videoRef = useRef(null);
   const handleResult = (transcript) => {
     setValue(transcript);
   };
@@ -32,7 +35,7 @@ export default function Home() {
     stopRecognition();
     await axios
       .post("http://localhost:5000/common-api", {
-        input, 
+        input,
       })
       .then(function (response) {
         setData([...data, response.data]);
@@ -72,10 +75,92 @@ export default function Home() {
         "http://localhost:5000/generate-question",
         { topic }
       );
-      setQuestion(response.data.question);
-      setLoading(false);
+
+      speakHandler(response.data.question);
+    
     } catch (error) {
       console.error("Error fetching question:", error);
+      setLoading(false);
+    }
+  };
+
+  //   const speakHandler = async (text) => {
+  //     setLoading(true);
+  //     await axios
+  //       .post(
+  //         `https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ`,
+  //         {
+  //           text: `Born and raised in the charming south,
+  //         I can add a touch of sweet southern hospitality
+  //         to your audiobooks and podcasts`,
+  //           model_id: "eleven_multilingual_v2",
+  //           voice_settings: {
+  //             stability: 0.5,
+  //             similarity_boost: 0.5,
+  //           },
+  //         },
+  //         {
+  //           headers: {
+  //             "x-api-key": "551ce03db8ee1fbfbc2779a717aa98ce",
+  //             Accept: "audio/mpeg",
+  //             "Content-Type": "application/json",
+  //             responseType: 'blob'
+  //           },
+  //         }
+  //       )
+  //       .then(function (response) {
+  //         console.log(response.data, "response");
+  //         setLoading(false);
+
+  //         const audioUrl = URL.createObjectURL(response.data);
+  //         setAudioSrc(audioUrl);
+  //       })
+  //       .catch(function (error) {
+  //         console.log(error);
+  //         setLoading(false);
+  //       });
+  //   };
+
+  const speakHandler = async (text) => {
+    setLoading(true);
+    const apiKey = "551ce03db8ee1fbfbc2779a717aa98ce";
+    const apiUrl =
+      "https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ/stream";
+    const payload = {
+      text:
+        text ||
+        `Born and raised in the charming south, 
+        I can add a touch of sweet southern hospitality 
+        to your audiobooks and podcasts`,
+      model_id: "eleven_multilingual_v2",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.5,
+      },
+    };
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch audio");
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setAudioSrc(audioUrl);
+      setLoading(false);
+      setQuestion(text);
+    } catch (error) {
+      console.error("Error generating audio:", error);
       setLoading(false);
     }
   };
@@ -108,11 +193,11 @@ export default function Home() {
                 <Typography className="text-white block mb-4">
                   {capitalizeString(item?.input || "")}
                 </Typography>
-               <div className="p-4 bg-gray-800 rounded-xl">
-               <Typography className="text-gray-400 ">
-                  {parseContent(item?.message || "")}
-                </Typography>
-              </div>
+                <div className="p-4 bg-gray-800 rounded-xl">
+                  <Typography className="text-gray-400 ">
+                    {parseContent(item?.message || "")}
+                  </Typography>
+                </div>
               </div>
             ))}
           </div>
@@ -177,7 +262,7 @@ export default function Home() {
       ),
       children: (
         <>
-          <div className="my-4">
+          <div className="my-4 flex items-center justify-center">
             <Select
               placeholder="Select a topic"
               onChange={(value) => setTopic(value)}
@@ -190,47 +275,83 @@ export default function Home() {
               <Option value="python">Python</Option>
               <Option value="java">Java</Option>
             </Select>
-            <Button onClick={fetchQuestion} disabled={!topic} loading={loading} type="primary">
+            <Button
+              onClick={fetchQuestion}
+              disabled={!topic}
+              loading={loading}
+              type="primary"
+            >
               Generate Question
             </Button>
           </div>
 
           {question && (
             <div className="my-4">
-              <Typography.Text className="text-white block">
+              <Typography.Text className="text-white block text-center">
                 {capitalizeString(question)}
               </Typography.Text>
 
-              <Button
-                loading={loading}
-                disabled={startLoading}
-                size="large"
-                type={startLoading ? "primary" : "default"}
-                className="mt-4"
-                onClick={startRecognition}
-              >
-                {startLoading ? (
-                  <Spin />
-                ) : (
-                  <Typography.Text className="text-xl">
-                    <AudioOutlined /> Start Answer
-                  </Typography.Text>
-                )}
-              </Button>
-
-              {startLoading && (
-                <Button
-                  size="large"
-                  className="ml-4"
-                  onClick={() => {
-                    stopRecognition();
-                    setValue("");
+              {audioSrc && (
+                <audio
+                  ref={audioRef}
+                  className="ml-[-1000px] h-4"
+                  autoPlay
+                  controls
+                  src={audioSrc}
+                  onEnded={() => {
+                    if (videoRef.current) {
+                      videoRef.current.pause();
+                    }
                   }}
-                >
-                  Stop Answering
-                </Button>
+                />
               )}
 
+              {audioSrc && (
+                <div className="flex items-center justify-center w-full">
+                  <video
+                    ref={videoRef}
+                    loop
+                    src={character}
+                    width="750"
+                    height="500"
+                    controls={false}
+                    autoPlay
+                    muted={true}
+                    playsInline
+                  ></video>
+                </div>
+              )}
+
+              <div className="flex items-center justify-center mt-4">
+                <Button
+                  loading={loading}
+                  disabled={startLoading}
+                  size="large"
+                  type={startLoading ? "primary" : "default"}
+                  onClick={startRecognition}
+                >
+                  {startLoading ? (
+                    <Spin />
+                  ) : (
+                    <Typography.Text className="text-xl">
+                      <AudioOutlined /> Start Answer
+                    </Typography.Text>
+                  )}
+                </Button>
+
+                {startLoading && (
+                  <Button
+                    size="large"
+                    className="ml-4"
+                    onClick={() => {
+                      stopRecognition();
+                      setValue("");
+                    }}
+                  >
+                    Stop Answering
+                  </Button>
+                )}
+              </div>
               {value && (
                 <div className="p-6 bg-black">
                   <Typography.Text className="text-white">
