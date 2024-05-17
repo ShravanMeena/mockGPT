@@ -5,6 +5,8 @@ import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import { AudioOutlined } from "@ant-design/icons";
 import { capitalizeString } from "../../handler/utils";
 import character from "../../assets/characters/char_one.mp4";
+import chat_error from "../../assets/characters/chat_error.mp4";
+
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -15,6 +17,7 @@ export default function Home() {
   const [topic, setTopic] = useState("");
   const [question, setQuestion] = useState("");
   const [audioSrc, setAudioSrc] = useState("");
+  const [error, setError] = useState(false);
   const audioRef = useRef(null);
   const videoRef = useRef(null);
   const handleResult = (transcript) => {
@@ -31,6 +34,7 @@ export default function Home() {
 
   const submitHandler = async (input) => {
     setLoading(true);
+    setError(false);
     setValue("");
     stopRecognition();
     await axios
@@ -44,6 +48,7 @@ export default function Home() {
       .catch(function (error) {
         console.log(error);
         setLoading(false);
+        setError(true);
       });
   };
 
@@ -77,10 +82,10 @@ export default function Home() {
       );
 
       speakHandler(response.data.question);
-    
     } catch (error) {
       console.error("Error fetching question:", error);
       setLoading(false);
+      setError(true);
     }
   };
 
@@ -123,7 +128,7 @@ export default function Home() {
 
   const speakHandler = async (text) => {
     setLoading(true);
-    const apiKey = "551ce03db8ee1fbfbc2779a717aa98ce";
+    const apiKey = "aace954694a7e1b8fdc3c1dda7381643";
     const apiUrl =
       "https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ/stream";
     const payload = {
@@ -151,7 +156,9 @@ export default function Home() {
       });
 
       if (!response.ok) {
+      setError(true)
         throw new Error("Failed to fetch audio");
+
       }
 
       const audioBlob = await response.blob();
@@ -160,8 +167,10 @@ export default function Home() {
       setLoading(false);
       setQuestion(text);
     } catch (error) {
+      setQuestion(text);
       console.error("Error generating audio:", error);
       setLoading(false);
+      setError(true)
     }
   };
 
@@ -321,7 +330,7 @@ export default function Home() {
                   ></video>
                 </div>
               )}
-
+            
               <div className="flex items-center justify-center mt-4">
                 <Button
                   loading={loading}
@@ -361,6 +370,22 @@ export default function Home() {
               )}
             </div>
           )}
+
+              {error &&  <div className="flex flex-col items-center justify-center w-full">
+                  <video
+                    loop
+                    src={chat_error}
+                    width="750"
+                    height="500"
+                    controls={false}
+                    autoPlay
+                    muted={true}
+                    playsInline
+                  ></video>
+
+                  <h1 className="text-3xl text-red-500">ERROR: Audio Quota Exceeded</h1>
+                </div>}
+
         </>
       ),
     },
