@@ -10,12 +10,18 @@ import chat_error from "../../assets/characters/chat_error.mp4";
 const { TextArea } = Input;
 const { Option } = Select;
 
+const PLAYHT_SECRET = "ak-c7ce6f4ac81e4ec1b045aea0c81b0f6e";
+const PLAYHT_API = "https://api.play.ht/text-to-speech/v1/generate";
+const PLAYHT_USER_ID = "MRIsqMuRe7QyJMTp9BPhgD4YRwy1";
+const apiKey = "16afe6b823e5eed0318f01cfad0ce21b";
+
 export default function Home() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState("");
   const [topic, setTopic] = useState("");
   const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
   const [audioSrc, setAudioSrc] = useState("");
   const [error, setError] = useState(false);
   const audioRef = useRef(null);
@@ -76,6 +82,7 @@ export default function Home() {
     if (!topic) return;
     setLoading(true);
     setError(false);
+    setAnswer("")
 
     try {
       const response = await axios.post(
@@ -91,48 +98,10 @@ export default function Home() {
     }
   };
 
-  //   const speakHandler = async (text) => {
-  //     setLoading(true);
-  //     await axios
-  //       .post(
-  //         `https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ`,
-  //         {
-  //           text: `Born and raised in the charming south,
-  //         I can add a touch of sweet southern hospitality
-  //         to your audiobooks and podcasts`,
-  //           model_id: "eleven_multilingual_v2",
-  //           voice_settings: {
-  //             stability: 0.5,
-  //             similarity_boost: 0.5,
-  //           },
-  //         },
-  //         {
-  //           headers: {
-  //             "x-api-key": "551ce03db8ee1fbfbc2779a717aa98ce",
-  //             Accept: "audio/mpeg",
-  //             "Content-Type": "application/json",
-  //             responseType: 'blob'
-  //           },
-  //         }
-  //       )
-  //       .then(function (response) {
-  //         console.log(response.data, "response");
-  //         setLoading(false);
-
-  //         const audioUrl = URL.createObjectURL(response.data);
-  //         setAudioSrc(audioUrl);
-  //       })
-  //       .catch(function (error) {
-  //         console.log(error);
-  //         setLoading(false);
-  //       });
-  //   };
-
   const speakHandler = async (text) => {
     setLoading(true);
-    const apiKey = "aace954694a7e1b8fdc3c1dda7381643";
     const apiUrl =
-      "https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ";
+      "https://api.elevenlabs.io/v1/text-to-speech/abRFZIdN4pvo8ZPmGxHP";
     const payload = {
       text:
         text ||
@@ -175,6 +144,27 @@ export default function Home() {
     }
   };
 
+  const analyzeAnswer = async () => {
+    if (!value) return;
+    setLoading(true);
+    setError(false);
+
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/analyze-answer",
+        { answer: value }
+      );
+
+      setAnswer(response.data);
+      setLoading(false);
+
+    } catch (error) {
+      console.error("Error fetching question:", error);
+      setLoading(false);
+      setError(true);
+    }
+  };
+
   const [selectedTab, setSelectedTab] = useState("1");
   const onChange = (key) => {
     setSelectedTab(key);
@@ -190,7 +180,7 @@ export default function Home() {
       ),
       children: (
         <>
-          <div className="h-[80vh] overflow-scroll">
+          <div className="h-[75vh] md:h-[80vh] overflow-scroll">
             {data && data.length === 0 && (
               <div className="flex items-center justify-center w-full h-full">
                 <Typography className="text-gray-300 text-2xl">
@@ -212,7 +202,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="flex items-center mt-4">
+          <div className="flex flex-col items-center mt-4 md:flex-row">
             <TextArea
               rows={1}
               size="large"
@@ -225,7 +215,8 @@ export default function Home() {
                 }
               }}
             />
-            <Button
+          <div className="flex mt-4 md:mt-0">
+          <Button
               loading={loading}
               size="large"
               className="ml-4"
@@ -259,6 +250,7 @@ export default function Home() {
             >
               Reset
             </Button>
+          </div>
           </div>
         </>
       ),
@@ -336,6 +328,19 @@ export default function Home() {
                   <Typography.Text className="text-white">
                     {capitalizeString(value)}
                   </Typography.Text>
+
+                  <Button onClick={analyzeAnswer}>Submit</Button>
+                </div>
+              )}
+
+              {answer && (
+                <div className="p-6 bg-black mt-4">
+                  <Typography.Text className="text-white block text-2xl">
+                    Analyze - ({answer.rating})
+                  </Typography.Text>
+                  <Typography.Text className="text-white">
+                    {capitalizeString(answer.feedback)}
+                  </Typography.Text>
                 </div>
               )}
 
@@ -373,7 +378,7 @@ export default function Home() {
           )}
 
           {error && (
-            <div className="flex flex-col items-center justify-center w-full">
+            <div className="flex flex-col items-center justify-center w-full text-center">
               <video
                 loop
                 src={chat_error}
@@ -385,7 +390,7 @@ export default function Home() {
                 playsInline
               ></video>
 
-              <h1 className="text-3xl text-red-500">
+              <h1 className="text-3xl text-red-500 mt-2">
                 ERROR: Audio Quota Exceeded
               </h1>
             </div>
@@ -396,7 +401,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="px-20">
+    <div className="px-4 md:p-20">
       <Tabs defaultActiveKey="1" items={items} onChange={onChange} />
     </div>
   );
