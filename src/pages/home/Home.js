@@ -401,7 +401,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="px-4 md:p-20">
+    <div className="px-4 md:px-20">
       <Tabs defaultActiveKey="1" items={items} onChange={onChange} />
     </div>
   );
