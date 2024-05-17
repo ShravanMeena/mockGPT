@@ -1,15 +1,18 @@
-import { Button, Input, Spin, Typography } from "antd";
+import { Button, Input, Select, Spin, Typography, Tabs } from "antd";
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
 import { AudioOutlined } from "@ant-design/icons";
 import { capitalizeString } from "../../handler/utils";
 const { TextArea } = Input;
+const { Option } = Select;
 
 export default function Home() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [value, setValue] = useState("");
+  const [topic, setTopic] = useState("");
+  const [question, setQuestion] = useState("");
 
   const handleResult = (transcript) => {
     setValue(transcript);
@@ -25,21 +28,19 @@ export default function Home() {
 
   const submitHandler = async (input) => {
     setLoading(true);
-    stopRecognition()
+    setValue("");
+    stopRecognition();
     await axios
-      .post("http://localhost:5000/api", {
-        input: input, // Use the provided input instead of value state
+      .post("http://localhost:5000/common-api", {
+        input, 
       })
       .then(function (response) {
-        setValue("");
         setData([...data, response.data]);
         setLoading(false);
-   
       })
       .catch(function (error) {
         console.log(error);
         setLoading(false);
-        
       });
   };
 
@@ -63,73 +64,190 @@ export default function Home() {
     });
   };
 
+  const fetchQuestion = async () => {
+    if (!topic) return;
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/generate-question",
+        { topic }
+      );
+      setQuestion(response.data.question);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching question:", error);
+      setLoading(false);
+    }
+  };
+
+  const [selectedTab, setSelectedTab] = useState("1");
+  const onChange = (key) => {
+    setSelectedTab(key);
+  };
+
+  const items = [
+    {
+      key: "1",
+      label: (
+        <Button type={selectedTab === "1" ? "primary" : "dashed"}>
+          TalkGPT
+        </Button>
+      ),
+      children: (
+        <>
+          <div className="h-[80vh] overflow-scroll">
+            {data && data.length === 0 && (
+              <div className="flex items-center justify-center w-full h-full">
+                <Typography className="text-gray-300 text-2xl">
+                  No messages yet
+                </Typography>
+              </div>
+            )}
+            {data.map((item, index) => (
+              <div className="bg-gray-600 rounded-lg p-4 my-4" key={index}>
+                <Typography className="text-white block mb-4">
+                  {capitalizeString(item?.input || "")}
+                </Typography>
+               <div className="p-4 bg-gray-800 rounded-xl">
+               <Typography className="text-gray-400 ">
+                  {parseContent(item?.message || "")}
+                </Typography>
+              </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center mt-4">
+            <TextArea
+              rows={1}
+              size="large"
+              placeholder="Ask anything here...(Type or speak📢...)"
+              onChange={(e) => setValue(e.target.value)}
+              value={value}
+              onKeyUp={(ev) => {
+                if (ev.key === "Enter") {
+                  submitHandler(value);
+                }
+              }}
+            />
+            <Button
+              loading={loading}
+              size="large"
+              className="ml-4"
+              type="primary"
+              onClick={() => submitHandler(value)}
+            >
+              Submit
+            </Button>
+            <Button
+              loading={loading}
+              disabled={startLoading}
+              size="large"
+              type={startLoading ? "primary" : "default"}
+              className="mx-4"
+              onClick={startRecognition}
+            >
+              {startLoading ? (
+                <Spin />
+              ) : (
+                <Typography.Text className="text-xl">
+                  <AudioOutlined />
+                </Typography.Text>
+              )}
+            </Button>
+            <Button
+              size="large"
+              onClick={() => {
+                setValue("");
+                stopRecognition();
+              }}
+            >
+              Reset
+            </Button>
+          </div>
+        </>
+      ),
+    },
+    {
+      key: "2",
+      label: (
+        <Button type={selectedTab === "2" ? "primary" : "dashed"}>
+          MockGPT
+        </Button>
+      ),
+      children: (
+        <>
+          <div className="my-4">
+            <Select
+              placeholder="Select a topic"
+              onChange={(value) => setTopic(value)}
+              style={{ width: 200 }}
+              className="mr-4"
+            >
+              <Option value="javascript">JavaScript</Option>
+              <Option value="react">React</Option>
+              <Option value="node">Node.js</Option>
+              <Option value="python">Python</Option>
+              <Option value="java">Java</Option>
+            </Select>
+            <Button onClick={fetchQuestion} disabled={!topic} loading={loading} type="primary">
+              Generate Question
+            </Button>
+          </div>
+
+          {question && (
+            <div className="my-4">
+              <Typography.Text className="text-white block">
+                {capitalizeString(question)}
+              </Typography.Text>
+
+              <Button
+                loading={loading}
+                disabled={startLoading}
+                size="large"
+                type={startLoading ? "primary" : "default"}
+                className="mt-4"
+                onClick={startRecognition}
+              >
+                {startLoading ? (
+                  <Spin />
+                ) : (
+                  <Typography.Text className="text-xl">
+                    <AudioOutlined /> Start Answer
+                  </Typography.Text>
+                )}
+              </Button>
+
+              {startLoading && (
+                <Button
+                  size="large"
+                  className="ml-4"
+                  onClick={() => {
+                    stopRecognition();
+                    setValue("");
+                  }}
+                >
+                  Stop Answering
+                </Button>
+              )}
+
+              {value && (
+                <div className="p-6 bg-black">
+                  <Typography.Text className="text-white">
+                    {capitalizeString(value)}
+                  </Typography.Text>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ),
+    },
+  ];
+
   return (
     <div className="px-20">
-      <div className="h-[90vh] overflow-scroll">
-        {data && data.length === 0 && (
-          <div className="flex items-center justify-center w-full h-full">
-            <Typography className="text-gray-300 text-2xl">
-              No messages yet
-            </Typography>
-          </div>
-        )}
-        {data.map((item, index) => (
-          <div className="bg-gray-600 rounded-lg p-4 my-4" key={index}>
-            <Typography className="text-white">
-              {capitalizeString(item?.input || "")}
-            </Typography>
-            <Typography className="text-gray-300">
-              {parseContent(item?.message || "")}
-            </Typography>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center mt-4">
-        <TextArea
-        rows={1}
-          size="large"
-          placeholder="Type here..."
-          onChange={(e) => setValue(e.target.value)}
-          value={value}
-          onKeyUp={(ev) => {
-            if (ev.key === "Enter") {
-              submitHandler(value);
-            }
-          }}
-        />
-        <Button
-          loading={loading}
-          size="large"
-          className="ml-4"
-          type="primary"
-          onClick={() => submitHandler(value)}
-        >
-          Submit
-        </Button>
-        <Button
-          loading={loading}
-          disabled={startLoading}
-          size="large"
-          type={startLoading ? "primary" : "default"}
-          className="mx-4"
-          onClick={startRecognition}
-        >
-          {startLoading ? (
-            <Spin />
-          ) : (
-            <Typography.Text className="text-xl">
-              <AudioOutlined />
-            </Typography.Text>
-          )}
-        </Button>
-        <Button size="large" onClick={() =>{
-            stopRecognition()
-            setValue("")
-        }}>
-          Reset
-        </Button>
-      </div>
+      <Tabs defaultActiveKey="1" items={items} onChange={onChange} />
     </div>
   );
 }

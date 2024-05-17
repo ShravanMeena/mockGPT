@@ -46,10 +46,11 @@ export const useSpeechRecognition = (onResult) => {
   const [interimTranscript, setInterimTranscript] = useState("");
 
   const startRecognition = () => {
+      setStartLoading(true);
+
     if (recognitionRef.current) {
       recognitionRef.current.start();
       console.log("Voice recognition started.");
-      setStartLoading(true);
     }
   };
 
@@ -57,8 +58,8 @@ export const useSpeechRecognition = (onResult) => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       console.log("Voice recognition stopped.");
-      setStartLoading(false);
     }
+    setStartLoading(false);
   };
 
   return {
