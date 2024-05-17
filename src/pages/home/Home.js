@@ -75,6 +75,8 @@ export default function Home() {
   const fetchQuestion = async () => {
     if (!topic) return;
     setLoading(true);
+    setError(false);
+
     try {
       const response = await axios.post(
         "http://localhost:5000/generate-question",
@@ -130,7 +132,7 @@ export default function Home() {
     setLoading(true);
     const apiKey = "aace954694a7e1b8fdc3c1dda7381643";
     const apiUrl =
-      "https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ/stream";
+      "https://api.elevenlabs.io/v1/text-to-speech/29vD33N1CtxCmqQRPOHJ";
     const payload = {
       text:
         text ||
@@ -148,7 +150,7 @@ export default function Home() {
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
-          "x-api-key": apiKey,
+          "xi-api-key": apiKey,
           "Content-Type": "application/json",
           Accept: "audio/mpeg",
         },
@@ -156,9 +158,8 @@ export default function Home() {
       });
 
       if (!response.ok) {
-      setError(true)
+        setError(true);
         throw new Error("Failed to fetch audio");
-
       }
 
       const audioBlob = await response.blob();
@@ -170,7 +171,7 @@ export default function Home() {
       setQuestion(text);
       console.error("Error generating audio:", error);
       setLoading(false);
-      setError(true)
+      setError(true);
     }
   };
 
@@ -300,37 +301,6 @@ export default function Home() {
                 {capitalizeString(question)}
               </Typography.Text>
 
-              {audioSrc && (
-                <audio
-                  ref={audioRef}
-                  className="ml-[-1000px] h-4"
-                  autoPlay
-                  controls
-                  src={audioSrc}
-                  onEnded={() => {
-                    if (videoRef.current) {
-                      videoRef.current.pause();
-                    }
-                  }}
-                />
-              )}
-
-              {audioSrc && (
-                <div className="flex items-center justify-center w-full">
-                  <video
-                    ref={videoRef}
-                    loop
-                    src={character}
-                    width="750"
-                    height="500"
-                    controls={false}
-                    autoPlay
-                    muted={true}
-                    playsInline
-                  ></video>
-                </div>
-              )}
-            
               <div className="flex items-center justify-center mt-4">
                 <Button
                   loading={loading}
@@ -362,19 +332,34 @@ export default function Home() {
                 )}
               </div>
               {value && (
-                <div className="p-6 bg-black">
+                <div className="p-6 bg-black mt-4">
                   <Typography.Text className="text-white">
                     {capitalizeString(value)}
                   </Typography.Text>
                 </div>
               )}
-            </div>
-          )}
 
-              {error &&  <div className="flex flex-col items-center justify-center w-full">
+              {audioSrc && (
+                <audio
+                  ref={audioRef}
+                  className="ml-[-1000px] h-4"
+                  autoPlay
+                  controls
+                  src={audioSrc}
+                  onEnded={() => {
+                    if (videoRef.current) {
+                      videoRef.current.pause();
+                    }
+                  }}
+                />
+              )}
+
+              {audioSrc && (
+                <div className="flex items-center justify-center w-full">
                   <video
+                    ref={videoRef}
                     loop
-                    src={chat_error}
+                    src={character}
                     width="750"
                     height="500"
                     controls={false}
@@ -382,10 +367,29 @@ export default function Home() {
                     muted={true}
                     playsInline
                   ></video>
+                </div>
+              )}
+            </div>
+          )}
 
-                  <h1 className="text-3xl text-red-500">ERROR: Audio Quota Exceeded</h1>
-                </div>}
+          {error && (
+            <div className="flex flex-col items-center justify-center w-full">
+              <video
+                loop
+                src={chat_error}
+                width="750"
+                height="500"
+                controls={false}
+                autoPlay
+                muted={true}
+                playsInline
+              ></video>
 
+              <h1 className="text-3xl text-red-500">
+                ERROR: Audio Quota Exceeded
+              </h1>
+            </div>
+          )}
         </>
       ),
     },
