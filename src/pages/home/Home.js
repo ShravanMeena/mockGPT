@@ -10,10 +10,8 @@ import chat_error from "../../assets/characters/chat_error.mp4";
 const { TextArea } = Input;
 const { Option } = Select;
 
-const PLAYHT_SECRET = "ak-c7ce6f4ac81e4ec1b045aea0c81b0f6e";
-const PLAYHT_API = "https://api.play.ht/text-to-speech/v1/generate";
-const PLAYHT_USER_ID = "MRIsqMuRe7QyJMTp9BPhgD4YRwy1";
-const apiKey = "16afe6b823e5eed0318f01cfad0ce21b";
+const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+const apiURL = process.env.REACT_APP_API_URL;
 
 export default function Home() {
   const [data, setData] = useState([]);
@@ -44,7 +42,7 @@ export default function Home() {
     setValue("");
     stopRecognition();
     await axios
-      .post("http://localhost:5000/common-api", {
+      .post(apiURL + "common-api", {
         input,
       })
       .then(function (response) {
@@ -82,13 +80,12 @@ export default function Home() {
     if (!topic) return;
     setLoading(true);
     setError(false);
-    setAnswer("")
+    setAnswer("");
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/generate-question",
-        { topic }
-      );
+      const response = await axios.post(apiURL + "generate-question", {
+        topic,
+      });
 
       speakHandler(response.data.question);
     } catch (error) {
@@ -150,14 +147,12 @@ export default function Home() {
     setError(false);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/analyze-answer",
-        { answer: value }
-      );
+      const response = await axios.post(apiURL + "analyze-answer", {
+        answer: value,
+      });
 
       setAnswer(response.data);
       setLoading(false);
-
     } catch (error) {
       console.error("Error fetching question:", error);
       setLoading(false);
@@ -215,42 +210,42 @@ export default function Home() {
                 }
               }}
             />
-          <div className="flex mt-4 md:mt-0">
-          <Button
-              loading={loading}
-              size="large"
-              className="ml-4"
-              type="primary"
-              onClick={() => submitHandler(value)}
-            >
-              Submit
-            </Button>
-            <Button
-              loading={loading}
-              disabled={startLoading}
-              size="large"
-              type={startLoading ? "primary" : "default"}
-              className="mx-4"
-              onClick={startRecognition}
-            >
-              {startLoading ? (
-                <Spin />
-              ) : (
-                <Typography.Text className="text-xl">
-                  <AudioOutlined />
-                </Typography.Text>
-              )}
-            </Button>
-            <Button
-              size="large"
-              onClick={() => {
-                setValue("");
-                stopRecognition();
-              }}
-            >
-              Reset
-            </Button>
-          </div>
+            <div className="flex mt-4 md:mt-0">
+              <Button
+                loading={loading}
+                size="large"
+                className="ml-4"
+                type="primary"
+                onClick={() => submitHandler(value)}
+              >
+                Submit
+              </Button>
+              <Button
+                loading={loading}
+                disabled={startLoading}
+                size="large"
+                type={startLoading ? "primary" : "default"}
+                className="mx-4"
+                onClick={startRecognition}
+              >
+                {startLoading ? (
+                  <Spin />
+                ) : (
+                  <Typography.Text className="text-xl">
+                    <AudioOutlined />
+                  </Typography.Text>
+                )}
+              </Button>
+              <Button
+                size="large"
+                onClick={() => {
+                  setValue("");
+                  stopRecognition();
+                }}
+              >
+                Reset
+              </Button>
+            </div>
           </div>
         </>
       ),
@@ -276,6 +271,8 @@ export default function Home() {
               <Option value="node">Node.js</Option>
               <Option value="python">Python</Option>
               <Option value="java">Java</Option>
+              <Option value="html">HTML</Option>
+              <Option value="css">CSS</Option>
             </Select>
             <Button
               onClick={fetchQuestion}
